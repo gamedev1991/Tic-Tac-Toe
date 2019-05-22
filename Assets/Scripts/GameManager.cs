@@ -8,13 +8,29 @@ using System;
 public enum Turn
 {
 	Player1,
-	Player2
+	Player2,
+    AI
 }
+
+public enum GameMode
+{
+    PVP,
+    AI
+}
+
+public enum GameLevel
+{
+    Easy,
+    Hard
+}
+
 public class GameManager : MonoBehaviour {
 	public GameObject startMenu;
 	public GameObject gridSelection;
-	public GridType gridTypeSelectedByUser;
-	public GameObject grid;
+	public GameObject gameModeSelection;
+	public GameObject gameLevelSelection;
+	public GameObject gameHUD;
+    public GameObject grid;
 	public Turn currentTurn;
 	public Text currentStatus;
 	public string winner;
@@ -25,7 +41,14 @@ public class GameManager : MonoBehaviour {
 
 	public Text player1Score;
 	public Text player2Score;
-	public static int NumberOfGames
+
+    public Text player2SymbolText;
+    public Text player2ScoreText;
+
+    public GridType gridTypeSelectedByUser;
+    public GameMode gameMode;
+    public GameLevel gameLevel;
+    public static int NumberOfGames
 	{
 		get{ 
 			return PlayerPrefs.GetInt ("NumOfGames");
@@ -76,48 +99,123 @@ public class GameManager : MonoBehaviour {
 
 	public void OnClickStart()
 	{
-		startMenu.SetActive (false);
-		gridSelection.SetActive (true);
-	}
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        startMenu.SetActive (false);
+        gameModeSelection.SetActive(true);
+    }
 
-	public void OnClickBack()
+    public void OnClickBack()
 	{
-		startMenu.SetActive (true);
-		gridSelection.SetActive (false);
-	}
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        if (gridSelection.activeSelf)
+        {
+            gridSelection.SetActive(false);
+            gameModeSelection.SetActive(true);
+        }
+        else if (gameLevelSelection.activeSelf)
+        {
+            gameLevelSelection.SetActive(false);
+            gameModeSelection.SetActive(true);
+        }
+        else if (gameModeSelection.activeSelf)
+        {
+            gameModeSelection.SetActive(false);
+            startMenu.SetActive(true);
+        }
+        else {
+            gridSelection.SetActive(true);
+            grid.SetActive(false);
+            gridManager.DestroyGrid();
+            gameHUD.SetActive(false);
+        }
+    }
 
-	public void OnClickThreeByThree()
+    public void OnClickPVP()
+    {
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        gameModeSelection.SetActive(false);
+        gridSelection.SetActive(true);
+        gameMode = GameMode.PVP;
+        player2SymbolText.text = "Player 2:";
+        player2ScoreText.text = "Player 2:";
+    }
+
+    public void OnClickAI()
+    {
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        gameModeSelection.SetActive(false);
+        gameMode = GameMode.AI;
+        gameLevelSelection.SetActive(true);
+        player2SymbolText.text = "AI :";
+        player2ScoreText.text = "AI :";
+    }
+
+    public void OnClickEasy()
+    {
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        gameLevel = GameLevel.Easy;
+        OnClickThreeByThree();
+    }
+
+    public void OnClickHard()
+    {
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        gameLevel = GameLevel.Hard;
+        OnClickThreeByThree();
+    }
+
+    public void OnClickThreeByThree()
 	{
-		gridSelection.SetActive (false);
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        if (gameMode == GameMode.PVP)
+        {
+            gridSelection.SetActive(false);
+        }
+        else {
+            gameLevelSelection.SetActive(false);
+        }
 		gridTypeSelectedByUser = GridType.ThreeByThree;
-		grid.SetActive (true);
-		currentStatus.gameObject.SetActive (true);
-		currentStatus.text = "Player 1's Turn";
-	}
+        StartGame();
+
+    }
 
 	public void OnClickFourByFour()
 	{
-		gridSelection.SetActive (false);
-		gridTypeSelectedByUser = GridType.FourByFour;
-		grid.SetActive (true);
-		currentStatus.gameObject.SetActive (true);
-		currentStatus.text = "Player 1's Turn";
-	}
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        gridTypeSelectedByUser = GridType.FourByFour;
+        StartGame();
+    }
 
-	public void OnClickRestart()
+    void StartGame()
+    {
+        gridSelection.SetActive(false);
+        gameHUD.SetActive(true);
+        grid.SetActive(true);
+        if (gridManager.isGridDestroyed)
+        {
+            gridManager.SetGrid();
+        }
+        currentStatus.gameObject.SetActive(true);
+        currentStatus.text = "Player 1's Turn";
+    }
+
+    public void OnClickRestart()
 	{
-		SceneManager.LoadScene (0);
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        SceneManager.LoadScene (0);
 	}
 
 	public void OnClickReset()
 	{
-		PlayerPrefs.DeleteAll ();
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        PlayerPrefs.DeleteAll ();
 		SceneManager.LoadScene (0);
 	}
 
 	public void OnClickExit()
 	{
-		Application.Quit ();
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        Application.Quit ();
 	}
 		
 	public void GameOver()
@@ -126,7 +224,7 @@ public class GameManager : MonoBehaviour {
 			gridManager.tileList [i].button.enabled = false;
 		}
 
-		if (winner.Contains ("Player")) {
+		if (winner.Contains ("Player")|| winner.Contains("AI")) {
 			currentStatus.text = winner + " WINS";
 		} else {
 			currentStatus.text = winner;
@@ -137,14 +235,10 @@ public class GameManager : MonoBehaviour {
 		resetButton.SetActive (true);
 	}
 
-	public bool CheckWinner()
+	public bool CheckWinner(Symbol symbol)
 	{
 		Symbol currentSymbol;
-		if (currentTurn.Equals (Turn.Player1)) {
-			currentSymbol = Symbol.Symbol1;
-		} else {
-			currentSymbol = Symbol.Symbol2;
-		}
+        currentSymbol = symbol;
 
 		//Check Horizontal
 		for (int i = 0; i < gridManager.tileList.Count; i = i + gridManager.numOfRows) {
@@ -204,4 +298,98 @@ public class GameManager : MonoBehaviour {
 		}
 		return true;
 	}
+
+    public void PlayAITurn()
+    {
+
+        bool isGameWon = false;
+        if (gameLevel == GameLevel.Easy)
+        {
+            List<int> tilesThatCanBeSelected = new List<int>();
+
+            for (int i = 0; i < gridManager.tileList.Count; i++)
+            {
+                if (gridManager.tileList[i].tileSymbol.Equals(Symbol.None))
+                {
+                    tilesThatCanBeSelected.Add(i);
+                    gridManager.tileList[i].tileSymbol = Symbol.Symbol2;
+                    if(CheckWinner(Symbol.Symbol2)){
+                        tilesThatCanBeSelected.Remove(i);
+                    }
+                    gridManager.tileList[i].tileSymbol = Symbol.None;
+                }
+            }
+            int tileNumberSelected = UnityEngine.Random.Range(0, tilesThatCanBeSelected.Count);
+
+            gridManager.tileList[tilesThatCanBeSelected[tileNumberSelected]].tileImage.sprite = gridManager.tileList[tilesThatCanBeSelected[tileNumberSelected]].symbolTwo;
+            gridManager.tileList[tilesThatCanBeSelected[tileNumberSelected]].tileSymbol = Symbol.Symbol2;
+        }
+        else {
+            bool isTurnPlayed = false;
+            List<int> tilesThatCanBeSelected = new List<int>();
+
+            for (int i = 0; i < gridManager.tileList.Count; i++)
+            {
+                if (gridManager.tileList[i].tileSymbol.Equals(Symbol.None))
+                {
+                    tilesThatCanBeSelected.Add(i);
+                    gridManager.tileList[i].tileSymbol = Symbol.Symbol2;
+                    if (CheckWinner(Symbol.Symbol2))// First Check if AI can win
+                    {
+                        Debug.Log("Here1");
+                        gridManager.tileList[i].tileImage.sprite = gridManager.tileList[i].symbolTwo;
+                        gridManager.tileList[i].tileSymbol = Symbol.Symbol2;
+                        isTurnPlayed = true;
+                        break;
+                    }
+                    else {
+                        gridManager.tileList[i].tileSymbol = Symbol.Symbol1;
+                        if (CheckWinner(Symbol.Symbol1))// Check if Player can win
+                        {
+                            Debug.Log("Here2");
+                            gridManager.tileList[i].tileImage.sprite = gridManager.tileList[i].symbolTwo;
+                            gridManager.tileList[i].tileSymbol = Symbol.Symbol2;
+                            isTurnPlayed = true;
+                            break;
+                        }
+                    }
+                    gridManager.tileList[i].tileSymbol = Symbol.None;
+
+                }
+            }
+            if (!isTurnPlayed)
+            {
+                int tileNumberSelected = UnityEngine.Random.Range(0, tilesThatCanBeSelected.Count);// if No one can win then any random symbol
+                Debug.Log("Here3");
+
+                gridManager.tileList[tilesThatCanBeSelected[tileNumberSelected]].tileImage.sprite = gridManager.tileList[tilesThatCanBeSelected[tileNumberSelected]].symbolTwo;
+                gridManager.tileList[tilesThatCanBeSelected[tileNumberSelected]].tileSymbol = Symbol.Symbol2;
+            }
+
+        }
+        currentTurn = Turn.Player1;
+
+        if (CheckWinner(Symbol.Symbol2))
+        {
+            isGameWon = true;
+            winner = "AI";
+            Player2Score++;
+        }
+        if (isGameWon)
+        {
+            GameOver();
+        }
+        else
+        {
+            if (CheckForDraw())
+            {
+                winner = "Draw";
+                GameOver();
+            }
+            else
+            {
+                currentStatus.text = currentTurn + "'s turn";
+            }
+        }
+    }
 }

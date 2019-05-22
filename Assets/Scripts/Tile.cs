@@ -27,24 +27,45 @@ public class Tile : MonoBehaviour {
 
 	public void OnClickTile()
 	{
-		bool isGameWon = false;
+        if (GameManager.instance.gameMode == GameMode.PVP &&
+            GameManager.instance.currentTurn == Turn.AI)
+        {
+            SoundManager.Instance.PlaySound(AudioSound.ClickError);
+            return;
+        }
+        SoundManager.Instance.PlaySound(AudioSound.Click);
+        bool isGameWon = false;
 		if (GameManager.instance.currentTurn.Equals (Turn.Player1)) {
 			tileImage.sprite = symbolOne;
 			tileSymbol = Symbol.Symbol1;
-			if (GameManager.instance.CheckWinner ()) {
+			if (GameManager.instance.CheckWinner (Symbol.Symbol1)) {
 				isGameWon = true;
 				GameManager.instance.winner = "Player1";
 				GameManager.Player1Score++;
 			}
-			GameManager.instance.currentTurn = Turn.Player2;
-		} else {
-			tileImage.sprite = symbolTwo;
-			tileSymbol = Symbol.Symbol2;
-			if (GameManager.instance.CheckWinner ()) {
-				isGameWon = true;
-				GameManager.instance.winner = "Player2";
-				GameManager.Player2Score++;
-			}
+            if (GameManager.instance.gameMode == GameMode.PVP)
+            {
+                GameManager.instance.currentTurn = Turn.Player2;
+            }
+            else {
+                GameManager.instance.currentTurn = Turn.AI;
+            }
+        } else {
+            if (GameManager.instance.gameMode == GameMode.PVP)
+            {
+                tileImage.sprite = symbolTwo;
+                tileSymbol = Symbol.Symbol2;
+                if (GameManager.instance.CheckWinner(Symbol.Symbol2))
+                {
+                    isGameWon = true;
+                    GameManager.instance.winner = "Player2";
+                    GameManager.Player2Score++;
+                }
+            }
+            else {
+                return;
+            }
+
 			GameManager.instance.currentTurn = Turn.Player1;
 		}
 
@@ -55,9 +76,20 @@ public class Tile : MonoBehaviour {
 				GameManager.instance.winner = "Draw";
 				GameManager.instance.GameOver ();
 			} else {
-				GameManager.instance.currentStatus.text = GameManager.instance.currentTurn + "'s turn";
-			}
+                
+                GameManager.instance.currentStatus.text = GameManager.instance.currentTurn + "'s turn";
+                if (GameManager.instance.gameMode == GameMode.AI)
+                {
+                    Invoke("CallAITurn", 1f);
+                }
+            }
 		}
 		button.enabled = false;
 	}
+
+    void CallAITurn()
+    {
+        GameManager.instance.PlayAITurn();
+        
+    }
 }

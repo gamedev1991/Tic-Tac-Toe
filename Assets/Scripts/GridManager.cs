@@ -16,16 +16,32 @@ public class GridManager : MonoBehaviour {
 	public int numOfCols;
 	private float tileWidth;
 	private float tileHeight;
-	private int row_offSet;
-	private int col_offSet;
-	 
-	// Use this for initialization
-	void Start () {
-		GetHeightAndWidthOfTile ();
-		SetGridType ();
-		CreateGrid ();
+	private float row_offSet;
+	private float col_offSet;
+    public bool isGridDestroyed;
+    // Use this for initialization
+    void Start () {
+        SetGrid();
 	}
 
+    public void SetGrid()
+    {
+        GetHeightAndWidthOfTile();
+        SetGridType();
+        CalculateStartPositions();
+        CreateGrid();
+    }
+    void CalculateStartPositions()
+    {
+        row_offSet = -((numOfRows / 2) * (tileWidth));
+        col_offSet = -((numOfCols / 2) * (tileHeight));
+        if (numOfRows % 2 == 0)
+        {
+            row_offSet += tileWidth / 2;
+            col_offSet += tileHeight / 2;
+        }
+
+    }
 
 	void GetHeightAndWidthOfTile()
 	{
@@ -40,17 +56,14 @@ public class GridManager : MonoBehaviour {
 		case GridType.ThreeByThree:
 			numOfRows = 3;
 			numOfCols = 3;
-			row_offSet = -50;
-			col_offSet = -50;
+			
 			break;
 		case GridType.FourByFour:
 			numOfRows = 4;
-			numOfCols = 4;
-			row_offSet = -75;
-			col_offSet = -75;
+			numOfCols = 4;		
 			break;
 
-		}
+        }
 	}
 
 	void CreateGrid()
@@ -66,6 +79,14 @@ public class GridManager : MonoBehaviour {
 		}
 	}
 
+    public void DestroyGrid()
+    {
+        for (int i = 0; i < parentCanvas.transform.childCount; i++)
+        {
+            Destroy(parentCanvas.GetChild(i).gameObject);
+        }
+        isGridDestroyed = true;
+    }
 
 	// Update is called once per frame
 	void Update () {
